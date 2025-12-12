@@ -1,0 +1,68 @@
+import customtkinter as ctk
+from ui.text_tab import TextTrainingTab
+from ui.image_tab import ImageTrainingTab
+from ui.audio_tab import AudioTrainingTab
+
+ctk.set_appearance_mode("Dark")
+ctk.set_default_color_theme("blue")
+
+class TrainingInterface(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+
+        self.title("Training interface")
+        self.geometry("1200x800")
+
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        self.sidebar_frame = ctk.CTkFrame(self, width=220, corner_radius=0)
+        self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
+        self.sidebar_frame.grid_rowconfigure(4, weight=1)
+
+        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="Training interface", font=ctk.CTkFont(size=22, weight="bold"))
+        self.logo_label.grid(row=0, column=0, padx=20, pady=(30, 20))
+
+        self.sidebar_button_text = ctk.CTkButton(self.sidebar_frame, text="📝 Metin Eğitimi", command=self.show_text_frame, height=40)
+        self.sidebar_button_text.grid(row=1, column=0, padx=20, pady=10)
+
+        self.sidebar_button_image = ctk.CTkButton(self.sidebar_frame, text="🖼️ Görsel Eğitimi", command=self.show_image_frame, height=40)
+        self.sidebar_button_image.grid(row=2, column=0, padx=20, pady=10)
+
+        self.sidebar_button_audio = ctk.CTkButton(self.sidebar_frame, text="🎵 Ses Eğitimi", command=self.show_audio_frame, height=40)
+        self.sidebar_button_audio.grid(row=3, column=0, padx=20, pady=10)
+
+        self.main_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.main_frame.grid(row=0, column=1, sticky="nsew")
+        self.main_frame.grid_columnconfigure(0, weight=1)
+        self.main_frame.grid_rowconfigure(0, weight=1)
+
+        self.text_tab = TextTrainingTab(self.main_frame)
+        self.image_tab = ImageTrainingTab(self.main_frame)
+        self.audio_tab = AudioTrainingTab(self.main_frame)
+
+        self.show_text_frame()
+
+    def show_text_frame(self):
+        self.image_tab.grid_forget()
+        self.audio_tab.grid_forget()
+        self.text_tab.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.sidebar_button_text.configure(fg_color=("gray75", "gray25"))
+        self.sidebar_button_image.configure(fg_color="transparent")
+        self.sidebar_button_audio.configure(fg_color="transparent")
+
+    def show_image_frame(self):
+        self.text_tab.grid_forget()
+        self.audio_tab.grid_forget()
+        self.image_tab.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.sidebar_button_text.configure(fg_color="transparent")
+        self.sidebar_button_image.configure(fg_color=("gray75", "gray25"))
+        self.sidebar_button_audio.configure(fg_color="transparent")
+
+    def show_audio_frame(self):
+        self.text_tab.grid_forget()
+        self.image_tab.grid_forget()
+        self.audio_tab.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.sidebar_button_text.configure(fg_color="transparent")
+        self.sidebar_button_image.configure(fg_color="transparent")
+        self.sidebar_button_audio.configure(fg_color=("gray75", "gray25"))

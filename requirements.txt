@@ -1,0 +1,12 @@
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+joblib
+customtkinter
+Pillow
+packaging
+
+torch
+torchaudio
