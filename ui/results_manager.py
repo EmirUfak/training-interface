@@ -46,6 +46,22 @@ class ResultsManager:
                 plt.close(fig_imp)
             except Exception:
                 pass
+        
+        # Karar Ağacı Görselleştirmesi (Entropy/Gini)
+        if "Decision Tree" in name:
+            try:
+                from sklearn.tree import plot_tree
+                fig_tree = plt.figure(figsize=(12, 6))
+                plot_tree(res['model'], max_depth=3, feature_names=imp_data[1] if imp_data else None, filled=True, fontsize=8)
+                plt.title(f"{name} Yapısı (İlk 3 Seviye)")
+                
+                canvas_tree = FigureCanvasTkAgg(fig_tree, master=plot_frame)
+                canvas_tree.draw()
+                canvas_tree.get_tk_widget().pack(side="left", padx=10, expand=True)
+                fig_tree.savefig(os.path.join(save_dir, f'{name}_structure.png'))
+                plt.close(fig_tree)
+            except Exception as e:
+                print(f"Tree plot error: {e}")
 
     def show_comparison(self, results, save_dir):
         fig = create_comparison_figure(pd.DataFrame(results))

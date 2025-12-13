@@ -5,8 +5,16 @@ from PIL import Image
 import torch
 import torchaudio
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder, StandardScaler
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 
 def load_images_from_folder(folder_path, img_size=(64, 64)):
+    """
+    Belirtilen klasörden görüntüleri yükler, gri tonlamaya çevirir ve düzleştirir.
+    Klasör yapısı: root/class_name/image.jpg
+    """
     data = []
     labels = []
     classes = os.listdir(folder_path)
@@ -23,7 +31,8 @@ def load_images_from_folder(folder_path, img_size=(64, 64)):
                 img_array = np.array(img).flatten()
                 data.append(img_array)
                 labels.append(category)
-            except Exception:
+            except Exception as e:
+                print(f"Hata (Görüntü atlandı): {img_name} - {e}")
                 pass
     
     return np.array(data), np.array(labels)
@@ -62,7 +71,7 @@ def load_audio_from_folder(folder_path, sample_rate=16000):
                 data.append(mfcc_mean)
                 labels.append(category)
             except Exception as e:
-                print(f"Error processing {audio_name}: {e}")
+                print(f"Hata (Ses dosyası atlandı): {audio_name} - {e}")
                 pass
                 
     return np.array(data), np.array(labels)
@@ -100,12 +109,64 @@ def load_single_audio(file_path, sample_rate=16000):
     except Exception as e:
         raise ValueError(f"Ses dosyası işlenemedi: {e}")
 
-def load_and_vectorize_text(csv_path, text_col, label_col, max_features=2000):
+def load_and_vectorize_text(csv_path, text_col, label_col, max_features=2000, ngram_range=(1, 1), stop_words=None):
     df = pd.read_csv(csv_path)
-    X = df[text_col].astype(str)
+    
+    # Eğer text_col bir liste ise birleştir
+    if isinstance(text_col, list):
+        X = df[text_col].fillna('').astype(str).agg(' '.join, axis=1)
+    else:
+        X = df[text_col].astype(str)
+        
     y = df[label_col]
 
-    vectorizer = TfidfVectorizer(max_features=max_features)
+    vectorizer = TfidfVectorizer(max_features=max_features, ngram_range=ngram_range, stop_words=stop_words)
     X_vec = vectorizer.fit_transform(X).toarray()
     
     return X_vec, y, vectorizer
+
+def load_categorical_data(csv_path, feature_cols, label_col):
+    """
+    Tablo verilerini (Sayısal + Kategorik) işlemek için gelişmiş fonksiyon.
+    Otomatik olarak sayısal ve kategorik sütunları ayırır, eksik verileri doldurur ve ölçeklendirir.
+    """
+    df = pd.read_csv(csv_path)
+    
+    X = df[feature_cols]
+    y = df[label_col]
+
+    # Sütun tiplerini otomatik algıla
+    numeric_features = X.select_dtypes(include=['int64', 'float64']).columns.tolist()
+    categorical_features = X.select_dtypes(include=['object', 'bool']).columns.tolist()
+
+    # 1. Sayısal Veriler İçin Pipeline (Eksik Veri Doldurma + Ölçeklendirme)
+    numeric_transformer = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='mean')), # Eksik verileri ortalama ile doldur
+        ('scaler', StandardScaler())                 # Verileri normalize et
+    ])
+
+    # 2. Kategorik Veriler İçin Pipeline (Eksik Veri Doldurma + One-Hot Encoding)
+    categorical_transformer = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='most_frequent')), # Eksik verileri en sık geçenle doldur
+        ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
+    ])
+
+    # İşlemleri Birleştir
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', numeric_transformer, numeric_features),
+            ('cat', categorical_transformer, categorical_features)
+        ],
+        remainder='drop' # Seçilmeyen sütunları at
+    )
+
+    # Dönüşümü Uygula
+    X_processed = preprocessor.fit_transform(X)
+    
+    # Hedef (y) için Label Encoding
+    label_encoder = LabelEncoder()
+    y_encoded = label_encoder.fit_transform(y)
+
+    # Preprocessor nesnesini de döndürüyoruz ki tahmin (inference) sırasında kullanabilelim
+    return X_processed, y_encoded, preprocessor, label_encoder
+

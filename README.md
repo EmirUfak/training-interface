@@ -1,37 +1,90 @@
 # Training Interface
 
-Bu proje, makine öğrenimi modellerini eğitmek ve görselleştirmek için geliştirilmiş bir kullanıcı arayüzüdür. Metin, görüntü ve ses verileri üzerinde işlem yapabilen modüller içerir.
+**Training Interface**, makine öğrenimi modellerini kod yazmadan eğitmek, test etmek ve kullanmak için geliştirilmiş kapsamlı bir masaüstü uygulamasıdır. Metin, görüntü, ses ve tablosal veriler üzerinde işlem yapabilen modüler bir yapıya sahiptir.
 
-<img width="1897" height="1010" alt="interface-1" src="https://github.com/user-attachments/assets/ad6fd156-7c28-4b6d-aee1-6386c096b0a0" />
-<img width="1890" height="978" alt="interface-2" src="https://github.com/user-attachments/assets/af903d0e-c9cb-4c40-861e-e6ba1331a9ed" />
-<img width="1667" height="760" alt="interface-3" src="https://github.com/user-attachments/assets/6560c201-4de1-4cf3-91f2-b7eb080ed18a" />
+## 📋 İçindekiler
 
+- [Özellikler](#-özellikler)
+- [Desteklenen Modeller](#-desteklenen-modeller)
+- [Kullanım](#-kullanım)
+- [Proje Yapısı](#-proje-yapısı)
+- [Ekran Görüntüleri](#-ekran-görüntüleri)
 
-## Özellikler
+## 🚀 Özellikler
 
-- **Metin Eğitimi:** Metin verileri üzerinde model eğitimi ve test işlemleri.
-- **Görüntü İşleme:** Görüntü verileri için eğitim arayüzü.
-- **Ses İşleme:** Ses verileri için eğitim arayüzü.
-- **Görselleştirme:** Eğitim sonuçlarının grafiksel gösterimi.
+Bu proje, farklı veri tipleri için özelleştirilmiş eğitim ve çıkarım (inference) modülleri sunar:
 
-## Kurulum
+### 1. 📝 Metin Eğitimi (Text Training)
+- Metin verileri üzerinde sınıflandırma modelleri eğitir.
+- **TF-IDF** vektörleştirme yöntemini kullanır.
+- Veri setlerini yükleyip eğitim/test olarak ayırabilir.
 
-Gerekli kütüphaneleri yüklemek için aşağıdaki komutu kullanabilirsiniz:
+### 2. 🖼️ Görüntü İşleme (Image Training)
+- Klasör tabanlı görüntü veri setlerini yükler (`root/class_name/image.jpg`).
+- Görüntüleri otomatik olarak gri tonlamaya çevirir ve yeniden boyutlandırır (Varsayılan: 64x64).
+- Piksel yoğunluklarını özellik olarak kullanır.
 
-```bash
-pip install -r requirements.txt
-```
+### 3. 🎵 Ses İşleme (Audio Training)
+- Ses dosyalarını (`.wav`, `.mp3`, `.flac`) işler.
+- **MFCC (Mel-frequency cepstral coefficients)** özellik çıkarımı yapar.
+- Otomatik örnekleme oranı (sample rate) dönüşümü (16kHz) sağlar.
 
-## Kullanım
+### 4. 📊 Tablosal Veri (Tabular Training)
+- CSV formatındaki yapısal verileri destekler.
+- Kategorik verileri otomatik olarak işler.
+- Hedef değişken (target) seçimi ile esnek eğitim imkanı sunar.
 
-Uygulamayı başlatmak için `main.py` dosyasını çalıştırın:
+### 5. 🧠 Çıkarım Modülü (Inference)
+- Eğitilen modelleri (`.joblib` formatında) yükleyerek yeni veriler üzerinde tahmin yapmanızı sağlar.
+- Tekil metin, görüntü veya ses dosyası yükleyerek anlık sonuç alabilirsiniz.
+
+### 6. 🌐 Çoklu Dil Desteği
+- Arayüz **Türkçe (TR)** ve **İngilizce (EN)** dillerini destekler.
+
+## 🤖 Desteklenen Modeller
+
+Uygulama, `scikit-learn` kütüphanesi tabanlı aşağıdaki algoritmaları destekler:
+
+- **Naive Bayes** (Multinomial & Gaussian)
+- **Support Vector Machines (SVM)** (Linear, RBF)
+- **Random Forest**
+- **Logistic Regression**
+- **Decision Tree** (Gini & Entropy)
+- **Gradient Boosting**
+- **K-Nearest Neighbors (KNN)**
+
+*Ayrıca Grid Search ile hiperparametre optimizasyonu seçeneği de mevcuttur.*
+
+## ▶️ Kullanım
+
+Uygulamayı başlatmak için ana dizindeki `main.py` dosyasını çalıştırın:
 
 ```bash
 python main.py
 ```
 
-## Proje Yapısı
+Açılan arayüzde sol menüden çalışmak istediğiniz veri tipini seçerek işlemlere başlayabilirsiniz.
 
-- `main.py`: Uygulamanın giriş noktası.
-- `modules/`: Veri yükleme, model eğitimi ve görselleştirme modülleri.
-- `ui/`: Kullanıcı arayüzü bileşenleri (sekmeler ve ana pencere).
+## 📂 Proje Yapısı
+
+```
+training-interface/
+├── main.py                 # Uygulamanın giriş noktası
+├── requirements.txt        # Bağımlılıklar
+├── modules/                # Arka plan işlemleri
+│   ├── data_loader.py      # Veri yükleme ve işleme (Görüntü, Ses, Metin)
+│   ├── model_trainer.py    # Model tanımları ve eğitim fonksiyonları
+│   ├── training_manager.py # Eğitim döngüsü yönetimi
+│   ├── visualization.py    # Grafik çizdirme araçları
+│   └── languages.py        # Dil dosyası
+└── ui/                     # Kullanıcı Arayüzü (CustomTkinter)
+    ├── main_window.py      # Ana pencere ve navigasyon
+    ├── base_tab.py         # Ortak tab yapısı
+    ├── text_tab.py         # Metin eğitimi arayüzü
+    ├── image_tab.py        # Görüntü eğitimi arayüzü
+    ├── audio_tab.py        # Ses eğitimi arayüzü
+    ├── tabular_tab.py      # Tablosal veri eğitimi arayüzü
+    └── inference_tab.py    # Tahminleme arayüzü
+```
+
+## 📸 Ekran Görüntüleri
