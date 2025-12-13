@@ -4,16 +4,15 @@ import pandas as pd
 import threading
 import os
 from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
 
 from ui.base_tab import BaseTrainingTab
 from modules.model_trainer import get_model
+from modules.data_loader import load_and_vectorize_text
 
 class TextTrainingTab(BaseTrainingTab):
     def setup_config_tab(self):
         config_tab = self.tab_view.tab("⚙️ Yapılandırma")
         
-        # Data Selection
         data_frame = ctk.CTkFrame(config_tab)
         data_frame.pack(fill="x", pady=10, padx=10)
         ctk.CTkLabel(data_frame, text="📁 Veri Seti Seçimi", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=15, pady=10)
@@ -37,7 +36,6 @@ class TextTrainingTab(BaseTrainingTab):
         self.combo_label_col = ctk.CTkComboBox(col_sub_frame, values=["Önce Dosya Seçin"], width=150)
         self.combo_label_col.pack(side="left", padx=5)
 
-        # Model Selection
         model_frame = ctk.CTkFrame(config_tab)
         model_frame.pack(fill="x", pady=10, padx=10)
         ctk.CTkLabel(model_frame, text="🤖 Model Seçimi", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=15, pady=10)
@@ -58,7 +56,6 @@ class TextTrainingTab(BaseTrainingTab):
             if name in ["Naive Bayes", "SVM"]: var.select()
             self.models_vars[name] = var
 
-        # Parameters
         param_frame = ctk.CTkFrame(config_tab)
         param_frame.pack(fill="x", pady=10, padx=10)
         ctk.CTkLabel(param_frame, text="🎛️ Eğitim Parametreleri", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=15, pady=10)
@@ -74,7 +71,6 @@ class TextTrainingTab(BaseTrainingTab):
         self.lbl_test_val.pack(side="left", padx=10)
         self.slider_test_size.configure(command=lambda v: self.lbl_test_val.configure(text=f"{v:.2f}"))
 
-        # Action
         action_frame = ctk.CTkFrame(config_tab, fg_color="transparent")
         action_frame.pack(fill="x", pady=20, padx=10)
         
@@ -118,12 +114,7 @@ class TextTrainingTab(BaseTrainingTab):
 
     def _training_worker(self, text_col, label_col, test_size):
         try:
-            df = pd.read_csv(self.csv_path)
-            X = df[text_col].astype(str)
-            y = df[label_col]
-
-            vectorizer = TfidfVectorizer(max_features=2000)
-            X_vec = vectorizer.fit_transform(X).toarray()
+            X_vec, y, vectorizer = load_and_vectorize_text(self.csv_path, text_col, label_col)
             
             X_train, X_test, y_train, y_test = train_test_split(X_vec, y, test_size=test_size, random_state=42)
 

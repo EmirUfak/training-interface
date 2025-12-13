@@ -14,7 +14,6 @@ class ImageTrainingTab(BaseTrainingTab):
     def setup_config_tab(self):
         config_tab = self.tab_view.tab("⚙️ Yapılandırma")
         
-        # Data Selection
         data_frame = ctk.CTkFrame(config_tab)
         data_frame.pack(fill="x", pady=10, padx=10)
         ctk.CTkLabel(data_frame, text="📁 Veri Seti Seçimi", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=15, pady=10)
@@ -29,7 +28,6 @@ class ImageTrainingTab(BaseTrainingTab):
         
         ctk.CTkLabel(data_frame, text="ℹ️ Klasör içinde her sınıf için ayrı bir alt klasör olmalıdır.", font=ctk.CTkFont(size=11, slant="italic"), text_color="gray").pack(anchor="w", padx=20, pady=(0, 10))
 
-        # Model Selection
         model_frame = ctk.CTkFrame(config_tab)
         model_frame.pack(fill="x", pady=10, padx=10)
         ctk.CTkLabel(model_frame, text="🤖 Model Seçimi", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=15, pady=10)
@@ -49,7 +47,6 @@ class ImageTrainingTab(BaseTrainingTab):
             if name == "SVM": var.select()
             self.models_vars[name] = var
 
-        # Parameters
         param_frame = ctk.CTkFrame(config_tab)
         param_frame.pack(fill="x", pady=10, padx=10)
         ctk.CTkLabel(param_frame, text="🎛️ Eğitim Parametreleri", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=15, pady=10)
@@ -65,7 +62,6 @@ class ImageTrainingTab(BaseTrainingTab):
         self.lbl_test_val.pack(side="left", padx=10)
         self.slider_test_size.configure(command=lambda v: self.lbl_test_val.configure(text=f"{v:.2f}"))
 
-        # Action
         action_frame = ctk.CTkFrame(config_tab, fg_color="transparent")
         action_frame.pack(fill="x", pady=20, padx=10)
         
@@ -98,7 +94,7 @@ class ImageTrainingTab(BaseTrainingTab):
 
     def _training_worker(self, test_size):
         try:
-            self.after(0, lambda: self._ui_log("📂 Görseller yükleniyor...", "cyan"))
+            self.after(0, lambda: self.results_manager.log_message("📂 Görseller yükleniyor...", "cyan"))
             X, y = load_images_from_folder(self.folder_path)
             
             if len(X) == 0:

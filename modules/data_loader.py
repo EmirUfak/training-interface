@@ -4,6 +4,7 @@ import pandas as pd
 from PIL import Image
 import torch
 import torchaudio
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 def load_images_from_folder(folder_path, img_size=(64, 64)):
     data = []
@@ -65,3 +66,13 @@ def load_audio_from_folder(folder_path, sample_rate=16000):
                 pass
                 
     return np.array(data), np.array(labels)
+
+def load_and_vectorize_text(csv_path, text_col, label_col, max_features=2000):
+    df = pd.read_csv(csv_path)
+    X = df[text_col].astype(str)
+    y = df[label_col]
+
+    vectorizer = TfidfVectorizer(max_features=max_features)
+    X_vec = vectorizer.fit_transform(X).toarray()
+    
+    return X_vec, y, vectorizer
