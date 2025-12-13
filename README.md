@@ -88,3 +88,9 @@ training-interface/
 ```
 
 ## 📸 Ekran Görüntüleri
+<img width="1184" height="810" alt="last1" src="https://github.com/user-attachments/assets/6a8b4ad7-861f-42f9-82da-eeb7586736b4" />
+<img width="428" height="550" alt="last2" src="https://github.com/user-attachments/assets/b5ec373d-7cb4-4317-9b17-e2688e755e94" />
+<img width="1646" height="962" alt="resim" src="https://github.com/user-attachments/assets/5a199e49-14b1-437d-8fe6-37280698bea1" />
+
+
+
