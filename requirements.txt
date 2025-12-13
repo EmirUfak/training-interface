@@ -6,7 +6,5 @@ seaborn
 joblib
 customtkinter
 Pillow
-packaging
-
 torch
 torchaudio
