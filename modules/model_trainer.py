@@ -69,7 +69,7 @@ def train_model(model, X_train, y_train, X_test, y_test, optimize=False, model_n
     if optimize and model_name in PARAM_GRIDS:
         try:
             print(f"{model_name} için Grid Search başlatılıyor...")
-            grid = GridSearchCV(model, PARAM_GRIDS[model_name], cv=3, scoring='f1_weighted', n_jobs=-1)
+            grid = GridSearchCV(model, PARAM_GRIDS[model_name], cv=3, scoring='f1_weighted', n_jobs=1)
             grid.fit(X_train, y_train)
             model = grid.best_estimator_
             print(f"{model_name} en iyi parametreler: {grid.best_params_}")
