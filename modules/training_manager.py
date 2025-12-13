@@ -2,6 +2,7 @@ import os
 import time
 import joblib
 import numpy as np
+from sklearn.preprocessing import StandardScaler
 from modules.model_trainer import train_model, save_model
 
 class TrainingManager:
@@ -13,10 +14,22 @@ class TrainingManager:
         self.completion_callback = completion_callback
         self.error_callback = error_callback
 
-    def run_training_loop(self, models, X_train, X_test, y_train, y_test, vectorizer=None):
+    def run_training_loop(self, models, X_train, X_test, y_train, y_test, vectorizer=None, apply_scaling=False):
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         save_dir = f"training_results_{timestamp}"
         os.makedirs(save_dir, exist_ok=True)
+
+        if apply_scaling:
+            try:
+                if self.log_callback:
+                    self.log_callback("⚖️ Veriler ölçeklendiriliyor (StandardScaler)...", "cyan")
+                scaler = StandardScaler()
+                X_train = scaler.fit_transform(X_train)
+                X_test = scaler.transform(X_test)
+                joblib.dump(scaler, os.path.join(save_dir, 'scaler.joblib'))
+            except Exception as e:
+                if self.log_callback:
+                    self.log_callback(f"⚠️ Ölçeklendirme hatası: {e}", "orange")
 
         try:
             joblib.dump(X_train, os.path.join(save_dir, 'X_train.joblib'))

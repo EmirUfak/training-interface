@@ -28,7 +28,6 @@ class ResultsManager:
         plot_frame = ctk.CTkFrame(res_frame, fg_color="transparent")
         plot_frame.pack(fill="x", padx=10, pady=10)
 
-        # Confusion Matrix
         fig = create_confusion_matrix_figure(y_test, res['y_pred'])
         canvas = FigureCanvasTkAgg(fig, master=plot_frame)
         canvas.draw()
@@ -36,7 +35,6 @@ class ResultsManager:
         fig.savefig(os.path.join(save_dir, f'{name}_confusion_matrix.png'))
         plt.close(fig)
 
-        # Feature Importance
         if imp_data:
             try:
                 importances, feature_names = imp_data
@@ -69,7 +67,7 @@ class ResultsManager:
         frame = ctk.CTkFrame(self.parent_frame, fg_color="#1a4d1a", border_color="#00ff00", border_width=2, corner_radius=15)
         frame.pack(fill="x", pady=20, padx=5)
         
-        ctk.CTkLabel(frame, text="🌟 EN BAŞARILI MODEL 🌟", font=ctk.CTkFont(size=20, weight="bold"), text_color="#00ff00").pack(pady=(15, 5))
+        ctk.CTkLabel(frame, text="EN BAŞARILI MODEL", font=ctk.CTkFont(size=20, weight="bold"), text_color="#00ff00").pack(pady=(15, 5))
         
         details = (f"Model: {data['name']}\n"
                    f"F1 Skoru: {data['f1']:.4f}\n"

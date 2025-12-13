@@ -41,7 +41,7 @@ class BaseTrainingTab(ctk.CTkFrame):
         for widget in self.results_area.winfo_children():
             widget.destroy()
 
-    def run_training_loop(self, models, X_train, X_test, y_train, y_test, vectorizer=None):
+    def run_training_loop(self, models, X_train, X_test, y_train, y_test, vectorizer=None, apply_scaling=False):
         manager = TrainingManager(
             log_callback=lambda msg, color: self.after(0, lambda: self.results_manager.log_message(msg, color)),
             result_callback=lambda n, r, i, y, s: self.after(0, lambda: self.results_manager.show_model_result(n, r, i, y, s)),
@@ -50,7 +50,7 @@ class BaseTrainingTab(ctk.CTkFrame):
             completion_callback=lambda s: self.after(0, lambda: self._on_training_complete(s)),
             error_callback=lambda n, e: self.after(0, lambda: self.results_manager.log_message(f"❌ {n} Hatası: {e}", "red"))
         )
-        manager.run_training_loop(models, X_train, X_test, y_train, y_test, vectorizer)
+        manager.run_training_loop(models, X_train, X_test, y_train, y_test, vectorizer, apply_scaling)
 
     def _on_training_complete(self, save_dir):
         self.prog_bar.stop()

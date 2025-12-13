@@ -12,7 +12,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 def get_model(name):
     if name == "Naive Bayes": return MultinomialNB()
     if name == "Naive Bayes (Gaussian)": return GaussianNB()
-    if name == "SVM": return SVC(kernel='linear')
+    if name == "SVM": return SVC(kernel='linear', probability=True)
     if name == "Random Forest": return RandomForestClassifier(n_estimators=50)
     if name == "Logistic Regression": return LogisticRegression(max_iter=1000)
     if name == "Decision Tree": return DecisionTreeClassifier()

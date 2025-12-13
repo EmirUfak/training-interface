@@ -110,7 +110,7 @@ class AudioTrainingTab(BaseTrainingTab):
 
             selected_models = {name: get_model(name) for name, var in self.models_vars.items() if var.get()}
             
-            self.run_training_loop(selected_models, X_train, X_test, y_train, y_test)
+            self.run_training_loop(selected_models, X_train, X_test, y_train, y_test, apply_scaling=True)
 
         except Exception as e:
             self.after(0, lambda: self.prog_bar.stop())
