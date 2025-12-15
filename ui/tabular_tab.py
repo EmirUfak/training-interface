@@ -106,6 +106,14 @@ class TabularTrainingTab(BaseTrainingTab):
         self.var_optimize = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(action_frame, text=self.tr("chk_optimize"), variable=self.var_optimize).pack(pady=(0, 10))
 
+        # --- Strategy Dropdown ---
+        self.var_optimize_strategy = ctk.StringVar(value="Tüm Modeller")
+        strategy_frame = ctk.CTkFrame(action_frame, fg_color="transparent")
+        strategy_frame.pack(fill="x", pady=(0, 10))
+        ctk.CTkLabel(strategy_frame, text="Grid Search Kapsamı:").pack(side="left", padx=5)
+        ctk.CTkOptionMenu(strategy_frame, variable=self.var_optimize_strategy, values=["Tüm Modeller", "Sadece En İyi Model"]).pack(side="left", padx=5)
+        # -------------------------
+
         self.btn_train = ctk.CTkButton(action_frame, text=self.tr("btn_start_training"), command=self.start_training_thread, state="disabled", height=50, font=ctk.CTkFont(size=16, weight="bold"), fg_color="green")
         self.btn_train.pack(fill="x")
 
@@ -168,13 +176,20 @@ class TabularTrainingTab(BaseTrainingTab):
             self.feature_vars[target].set(False)
 
     def start_training_thread(self):
-        if not self.csv_path:
+        if self.btn_train.cget("text") == self.tr("btn_stop_training"):
+            self.stop_training()
+            return
+
+        if not hasattr(self, 'csv_path') or not self.csv_path:
+            messagebox.showwarning(self.tr("msg_warning"), self.tr("msg_select_file_first"))
             return
 
         # UI verilerini ana thread'de oku
         target_col = self.target_var.get()
         feature_cols = [col for col, var in self.feature_vars.items() if var.get() and col != target_col]
         optimize = self.var_optimize.get()
+        strategy_val = self.var_optimize_strategy.get()
+        strategy = "all" if strategy_val == "Tüm Modeller" else "best"
         
         # Seçili modelleri al
         selected_models = [name for name, var in self.models_vars.items() if var.get()]
@@ -193,13 +208,13 @@ class TabularTrainingTab(BaseTrainingTab):
             return
 
         self.tab_view.set(self.tr("tab_results"))
-        self.btn_train.configure(state="disabled", text=self.tr("btn_training_running"))
+        self.btn_train.configure(state="normal", text=self.tr("btn_stop_training"), fg_color="red", hover_color="#c0392b")
         self.prog_bar.start()
         
         # Verileri thread'e argüman olarak gönder
-        threading.Thread(target=self.start_training, args=(feature_cols, target_col, selected_models, optimize), daemon=True).start()
+        threading.Thread(target=self.start_training, args=(feature_cols, target_col, selected_models, optimize, strategy), daemon=True).start()
 
-    def start_training(self, feature_cols, target_col, selected_models, optimize):
+    def start_training(self, feature_cols, target_col, selected_models, optimize, strategy):
         try:
             # UI güncellemesini ana thread'e zamanla
             self.after(0, lambda: self.results_manager.log_message(self.tr("loading_data"), "yellow"))
@@ -226,7 +241,7 @@ class TabularTrainingTab(BaseTrainingTab):
                                      "target_col": target_col,
                                      "model_type": "tabular"
                                  },
-                                 optimize=optimize)
+                                 optimize=optimize, optimize_strategy=strategy)
             
         except Exception as e:
             import traceback
@@ -235,4 +250,4 @@ class TabularTrainingTab(BaseTrainingTab):
 
     def _reset_ui_on_error(self):
         self.prog_bar.stop()
-        self.btn_train.configure(state="normal", text=self.tr("btn_start_training"))
+        self.btn_train.configure(state="normal", text=self.tr("btn_start_training"), fg_color="green", hover_color="#2ecc71")

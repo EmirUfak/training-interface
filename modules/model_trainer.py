@@ -68,11 +68,23 @@ def get_model(name, **kwargs):
 def train_model(model, X_train, y_train, X_test, y_test, optimize=False, model_name=None):
     if optimize and model_name in PARAM_GRIDS:
         try:
-            print(f"{model_name} için Grid Search başlatılıyor...")
-            grid = GridSearchCV(model, PARAM_GRIDS[model_name], cv=3, scoring='f1_weighted', n_jobs=1)
-            grid.fit(X_train, y_train)
-            model = grid.best_estimator_
-            print(f"{model_name} en iyi parametreler: {grid.best_params_}")
+            # Sınıf dağılımını kontrol et ve cv değerini ayarla
+            unique, counts = np.unique(y_train, return_counts=True)
+            min_count = np.min(counts) if len(counts) > 0 else 0
+            
+            cv_val = 3
+            if min_count < 3:
+                cv_val = int(min_count)
+            
+            if cv_val < 2:
+                print(f"UYARI: {model_name} için veri setinde çok az örnek var (En az bulunan sınıf: {min_count}). Optimizasyon atlanıyor.")
+                model.fit(X_train, y_train)
+            else:
+                print(f"{model_name} için Grid Search başlatılıyor (cv={cv_val})...")
+                grid = GridSearchCV(model, PARAM_GRIDS[model_name], cv=cv_val, scoring='f1_weighted', n_jobs=-1)
+                grid.fit(X_train, y_train)
+                model = grid.best_estimator_
+                print(f"{model_name} en iyi parametreler: {grid.best_params_}")
         except Exception as e:
             print(f"{model_name} optimizasyon hatası: {e}. Varsayılan eğitim yapılıyor.")
             model.fit(X_train, y_train)

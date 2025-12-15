@@ -137,6 +137,14 @@ class TextTrainingTab(BaseTrainingTab):
         self.var_optimize = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(action_frame, text=self.tr("chk_optimize"), variable=self.var_optimize).pack(pady=(0, 10))
 
+        # --- Strategy Dropdown ---
+        self.var_optimize_strategy = ctk.StringVar(value="Tüm Modeller")
+        strategy_frame = ctk.CTkFrame(action_frame, fg_color="transparent")
+        strategy_frame.pack(fill="x", pady=(0, 10))
+        ctk.CTkLabel(strategy_frame, text="Grid Search Kapsamı:").pack(side="left", padx=5)
+        ctk.CTkOptionMenu(strategy_frame, variable=self.var_optimize_strategy, values=["Tüm Modeller", "Sadece En İyi Model"]).pack(side="left", padx=5)
+        # -------------------------
+
         self.btn_train = ctk.CTkButton(action_frame, text=self.tr("btn_start_training"), command=self.start_training, fg_color="green", height=50, font=ctk.CTkFont(size=16, weight="bold"))
         self.btn_train.pack(fill="x")
         
@@ -160,6 +168,10 @@ class TextTrainingTab(BaseTrainingTab):
                 messagebox.showerror(self.tr("msg_error"), f"Dosya okunamadı: {e}")
 
     def start_training(self):
+        if self.btn_train.cget("text") == self.tr("btn_stop_training"):
+            self.stop_training()
+            return
+
         if not hasattr(self, 'csv_path'):
             messagebox.showwarning(self.tr("msg_warning"), self.tr("msg_select_file_first"))
             return
@@ -180,13 +192,15 @@ class TextTrainingTab(BaseTrainingTab):
         self.tab_view.set(self.tr("tab_results"))
         self.prog_bar.configure(mode="indeterminate")
         self.prog_bar.start()
-        self.btn_train.configure(state="disabled", text=self.tr("btn_training_running"))
+        self.btn_train.configure(state="normal", text=self.tr("btn_stop_training"), fg_color="red", hover_color="#c0392b")
         
         optimize = self.var_optimize.get()
+        strategy_val = self.var_optimize_strategy.get()
+        strategy = "all" if strategy_val == "Tüm Modeller" else "best"
 
-        threading.Thread(target=self._training_worker, args=(text_col, label_col, test_size, max_feat, ngram_range, optimize), daemon=True).start()
+        threading.Thread(target=self._training_worker, args=(text_col, label_col, test_size, max_feat, ngram_range, optimize, strategy), daemon=True).start()
 
-    def _training_worker(self, text_col, label_col, test_size, max_features, ngram_range, optimize):
+    def _training_worker(self, text_col, label_col, test_size, max_features, ngram_range, optimize, strategy):
         try:
             X_vec, y, vectorizer = load_and_vectorize_text(
                 self.csv_path, 
@@ -206,9 +220,9 @@ class TextTrainingTab(BaseTrainingTab):
                 if model is not None:
                     models_to_train[name] = model
             
-            self.run_training_loop(models_to_train, X_train, X_test, y_train, y_test, vectorizer=vectorizer, optimize=optimize)
+            self.run_training_loop(models_to_train, X_train, X_test, y_train, y_test, vectorizer=vectorizer, optimize=optimize, optimize_strategy=strategy)
 
         except Exception as e:
             self.after(0, lambda: self.prog_bar.stop())
-            self.after(0, lambda: self.btn_train.configure(state="normal", text=self.tr("btn_start_training")))
+            self.after(0, lambda: self.btn_train.configure(state="normal", text=self.tr("btn_start_training"), fg_color="green", hover_color="#2ecc71"))
             self.after(0, lambda: messagebox.showerror(self.tr("msg_error"), f"Eğitim sırasında hata: {e}"))

@@ -4,17 +4,19 @@ import joblib
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from modules.model_trainer import train_model, save_model
+from modules.visualization import create_learning_curve_figure
 
 class TrainingManager:
-    def __init__(self, log_callback=None, result_callback=None, comparison_callback=None, best_model_callback=None, completion_callback=None, error_callback=None):
+    def __init__(self, log_callback=None, result_callback=None, comparison_callback=None, best_model_callback=None, completion_callback=None, error_callback=None, stop_check=None):
         self.log_callback = log_callback
         self.result_callback = result_callback
         self.comparison_callback = comparison_callback
         self.best_model_callback = best_model_callback
         self.completion_callback = completion_callback
         self.error_callback = error_callback
+        self.stop_check = stop_check
 
-    def run_training_loop(self, models, X_train, X_test, y_train, y_test, vectorizer=None, apply_scaling=False, extra_data=None, optimize=False):
+    def run_training_loop(self, models, X_train, X_test, y_train, y_test, vectorizer=None, apply_scaling=False, extra_data=None, optimize=False, optimize_strategy="all"):
         print("DEBUG: TrainingManager.run_training_loop started") # DEBUG LOG
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         save_dir = f"training_results_{timestamp}"
@@ -60,13 +62,23 @@ class TrainingManager:
         best_f1 = -1
         best_model_data = None
 
+        # Strateji Belirleme
+        do_optimize_all = optimize and (optimize_strategy == "all")
+        do_optimize_best = optimize and (optimize_strategy == "best")
+
         for name, model in models.items():
+            if self.stop_check and self.stop_check():
+                if self.log_callback:
+                    self.log_callback("🛑 Eğitim kullanıcı tarafından durduruldu.", "red")
+                break
+
             if self.log_callback:
                 self.log_callback(f"⏳ {name} eğitiliyor...", "yellow")
             
             try:
                 # 1. EĞİTİM
-                res = train_model(model, X_train, y_train, X_test, y_test, optimize=optimize, model_name=name)
+                # Eğer "all" seçiliyse her model optimize edilir, "best" ise ilk turda optimize edilmez.
+                res = train_model(model, X_train, y_train, X_test, y_test, optimize=do_optimize_all, model_name=name)
                 results.append({"Model": name, "Accuracy": res["accuracy"], "F1-Score": res["f1"]})
                 
                 # 2. KAYDETME (Hata olursa devam et)
@@ -121,6 +133,40 @@ class TrainingManager:
         if len(results) > 1 and self.comparison_callback:
             self.comparison_callback(results, save_dir)
         
+        # Durdurma kontrolü (Optimizasyon öncesi)
+        if self.stop_check and self.stop_check():
+            if self.log_callback:
+                self.log_callback("🛑 Optimizasyon öncesi eğitim durduruldu.", "red")
+            if self.completion_callback:
+                self.completion_callback(save_dir)
+            return
+
+        # En iyi model optimizasyonu (Eğer seçildiyse)
+        if do_optimize_best and best_model_data:
+            best_name = best_model_data["name"]
+            if self.log_callback:
+                self.log_callback(f"🚀 En iyi model ({best_name}) için Grid Search başlatılıyor...", "cyan")
+            
+            try:
+                # Yeniden eğit (optimize=True ile)
+                model = best_model_data["model"]
+                res = train_model(model, X_train, y_train, X_test, y_test, optimize=True, model_name=best_name)
+                
+                # Sonuçları güncelle
+                best_model_data["model"] = res["model"]
+                best_model_data["acc"] = res["accuracy"]
+                best_model_data["f1"] = res["f1"]
+                
+                if self.log_callback:
+                    self.log_callback(f"✅ {best_name} optimize edildi. Yeni F1: {res['f1']:.4f}", "green")
+                
+                # Tekrar kaydet
+                save_model(res["model"], os.path.join(save_dir, f'{best_name}_model_optimized.joblib'))
+                
+            except Exception as e:
+                if self.log_callback:
+                    self.log_callback(f"⚠️ En iyi model optimizasyonu sırasında hata: {e}", "orange")
+
         if best_model_data:
             try:
                 best_name = best_model_data["name"]
@@ -128,6 +174,7 @@ class TrainingManager:
                 save_model(best_model_data["model"], os.path.join(save_dir, best_filename))
                 if self.best_model_callback:
                     self.best_model_callback(best_model_data, best_filename)
+
             except Exception as e:
                 if self.log_callback:
                     self.log_callback(f"⚠️ En iyi model ({best_model_data['name']}) kaydedilirken hata: {e}", "orange")
