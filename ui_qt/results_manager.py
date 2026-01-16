@@ -62,10 +62,13 @@ class ResultsManager:
             vbox.addWidget(header)
             vbox.addWidget(QLabel(f"{self.tr('lbl_accuracy')}: {res['accuracy']:.4f} | {self.tr('lbl_precision')}: {res['precision']:.4f} | {self.tr('lbl_recall')}: {res['recall']:.4f}"))
 
-            hbox = QHBoxLayout()
+            tiles = QHBoxLayout()
+            tiles.setSpacing(10)
+
             fig = create_confusion_matrix_figure(y_test, res['y_pred'])
             canvas = FigureCanvas(fig)
-            hbox.addWidget(canvas)
+            canvas.setFixedSize(320, 320)
+            tiles.addWidget(canvas)
             if _opt("save_plots"):
                 fig.savefig(f"{save_dir}/{name}_confusion_matrix.png")
 
@@ -73,10 +76,12 @@ class ResultsManager:
                 importances, feature_names = imp_data
                 fig_imp = create_feature_importance_figure(importances, feature_names)
                 canvas_imp = FigureCanvas(fig_imp)
-                hbox.addWidget(canvas_imp)
+                canvas_imp.setFixedSize(320, 320)
+                tiles.addWidget(canvas_imp)
                 if _opt("save_plots"):
                     fig_imp.savefig(f"{save_dir}/{name}_feature_importance.png")
-            vbox.addLayout(hbox)
+            tiles.addStretch(1)
+            vbox.addLayout(tiles)
 
         self.results_layout.addWidget(box)
         self._scroll_to_bottom(self.results_scroll)
@@ -95,6 +100,8 @@ class ResultsManager:
         vbox = QVBoxLayout(box)
         fig = create_comparison_figure(df, metric=metric_col)
         canvas = FigureCanvas(fig)
+        canvas.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        canvas.setMinimumHeight(300)
         vbox.addWidget(canvas)
         self.results_layout.addWidget(box)
         self._scroll_to_bottom(self.results_scroll)
