@@ -2,6 +2,8 @@
 
 **Training Interface**, makine öğrenimi modellerini kod yazmadan eğitmek, test etmek ve kullanmak için geliştirilmiş kapsamlı bir masaüstü uygulamasıdır. Metin, görüntü, ses ve tablosal veriler üzerinde işlem yapabilen modüler bir yapıya sahiptir.
 
+**Training Interface** is a desktop app for training, testing, and using machine learning models without writing code. It supports text, image, audio, and tabular workflows with a modular UI.
+
 ## 📋 İçindekiler
 
 - [Özellikler](#-özellikler)
@@ -10,7 +12,7 @@
 - [Proje Yapısı](#-proje-yapısı)
 - [Ekran Görüntüleri](#-ekran-görüntüleri)
 
-## 🚀 Özellikler
+## 🚀 Özellikler (Features)
 
 Bu proje, farklı veri tipleri için özelleştirilmiş eğitim ve çıkarım (inference) modülleri sunar:
 
@@ -18,11 +20,13 @@ Bu proje, farklı veri tipleri için özelleştirilmiş eğitim ve çıkarım (i
 - Metin verileri üzerinde sınıflandırma modelleri eğitir.
 - **TF-IDF** vektörleştirme yöntemini kullanır.
 - Veri setlerini yükleyip eğitim/test olarak ayırabilir.
+- Seyrek TF-IDF ve stop-words seçenekleri ile bellek/dil optimizasyonu.
 
 ### 2. 🖼️ Görüntü İşleme (Image Training)
 - Klasör tabanlı görüntü veri setlerini yükler (`root/class_name/image.jpg`).
 - Görüntüleri otomatik olarak gri tonlamaya çevirir ve yeniden boyutlandırır (Varsayılan: 64x64).
 - Piksel yoğunluklarını özellik olarak kullanır.
+- Düşük bellek modu (batch) ve veri çoğaltma (augmentation) desteği.
 
 ### 3. 🎵 Ses İşleme (Audio Training)
 - Ses dosyalarını (`.wav`, `.mp3`, `.flac`) işler.
@@ -33,29 +37,37 @@ Bu proje, farklı veri tipleri için özelleştirilmiş eğitim ve çıkarım (i
 - CSV formatındaki yapısal verileri destekler.
 - Kategorik verileri otomatik olarak işler.
 - Hedef değişken (target) seçimi ile esnek eğitim imkanı sunar.
+- Sınıflandırma ve regresyon görevleri için model seçimi.
 
 ### 5. 🧠 Çıkarım Modülü (Inference)
 - Eğitilen modelleri (`.joblib` formatında) yükleyerek yeni veriler üzerinde tahmin yapmanızı sağlar.
 - Tekil metin, görüntü veya ses dosyası yükleyerek anlık sonuç alabilirsiniz.
+- Tablosal veriler için CSV ile toplu tahmin ve dışa aktarım.
 
-### 6. 🌐 Çoklu Dil Desteği
+### 6. 🌐 Çoklu Dil Desteği (TR/EN)
 - Arayüz **Türkçe (TR)** ve **İngilizce (EN)** dillerini destekler.
 
-## 🤖 Desteklenen Modeller
+### 7. 📦 Çıktı Seçenekleri (Outputs)
+- Eğitim çıktıları artık `results/` altında tarih damgalı klasörlerde saklanır.
+- Model, veri setleri, vectorizer/scaler, grafikler, özet raporlar ve model kartları isteğe bağlı kaydedilir.
+
+## 🤖 Desteklenen Modeller (Supported Models)
 
 Uygulama, `scikit-learn` kütüphanesi tabanlı aşağıdaki algoritmaları destekler:
 
 - **Naive Bayes** (Multinomial & Gaussian)
-- **Support Vector Machines (SVM)** (Linear, RBF)
-- **Random Forest**
+- **Support Vector Machines (SVM/SVR)** (Linear, RBF, Poly, Sigmoid)
+- **Random Forest** / **Random Forest Regressor**
 - **Logistic Regression**
-- **Decision Tree** (Gini & Entropy)
-- **Gradient Boosting**
-- **K-Nearest Neighbors (KNN)**
+- **Decision Tree** (Gini & Entropy) / **Decision Tree Regressor**
+- **Gradient Boosting** / **Gradient Boosting Regressor**
+- **K-Nearest Neighbors (KNN/KNN Regressor)**
+- **Linear Regression**, **Ridge**, **Lasso**
+- **Simple CNN**, **Deep CNN** (image)
 
 *Ayrıca Grid Search ile hiperparametre optimizasyonu seçeneği de mevcuttur.*
 
-## ▶️ Kullanım
+## ▶️ Kullanım (Usage)
 
 Uygulamayı başlatmak için ana dizindeki `main.py` dosyasını çalıştırın:
 
@@ -65,7 +77,9 @@ python main.py
 
 Açılan arayüzde sol menüden çalışmak istediğiniz veri tipini seçerek işlemlere başlayabilirsiniz.
 
-## 📂 Proje Yapısı
+The UI uses PyQt6. Run `main.py` to launch the app.
+
+## 📂 Proje Yapısı (Project Structure)
 
 ```
 training-interface/
@@ -77,20 +91,18 @@ training-interface/
 │   ├── training_manager.py # Eğitim döngüsü yönetimi
 │   ├── visualization.py    # Grafik çizdirme araçları
 │   └── languages.py        # Dil dosyası
-└── ui/                     # Kullanıcı Arayüzü (CustomTkinter)
-    ├── main_window.py      # Ana pencere ve navigasyon
-    ├── base_tab.py         # Ortak tab yapısı
-    ├── text_tab.py         # Metin eğitimi arayüzü
-    ├── image_tab.py        # Görüntü eğitimi arayüzü
-    ├── audio_tab.py        # Ses eğitimi arayüzü
-    ├── tabular_tab.py      # Tablosal veri eğitimi arayüzü
-    └── inference_tab.py    # Tahminleme arayüzü
+├── ui_qt/                  # Kullanıcı Arayüzü (PyQt6)
+│   ├── main_window.py      # Ana pencere ve navigasyon
+│   ├── base_tab.py         # Ortak tab yapısı
+│   ├── text_tab.py         # Metin eğitimi arayüzü
+│   ├── image_tab.py        # Görüntü eğitimi arayüzü
+│   ├── audio_tab.py        # Ses eğitimi arayüzü
+│   ├── tabular_tab.py      # Tablosal veri eğitimi arayüzü
+│   └── inference_tab.py    # Tahminleme arayüzü
+└── results/                # Eğitim çıktıları (tarih damgalı klasörler)
 ```
 
 ## 📸 Ekran Görüntüleri
-<img width="1184" height="810" alt="last1" src="https://github.com/user-attachments/assets/6a8b4ad7-861f-42f9-82da-eeb7586736b4" />
-<img width="428" height="550" alt="last2" src="https://github.com/user-attachments/assets/b5ec373d-7cb4-4317-9b17-e2688e755e94" />
-<img width="1646" height="962" alt="resim" src="https://github.com/user-attachments/assets/5a199e49-14b1-437d-8fe6-37280698bea1" />
-
-
+<img width="1333" height="838" alt="ss1" src="https://github.com/user-attachments/assets/abe2a6de-f014-4f7f-a821-e5057ccfe51e" />
+<img width="1335" height="843" alt="ss2" src="https://github.com/user-attachments/assets/b3ef527f-1cb0-43fe-b78b-a61ff166dc95" />
 
