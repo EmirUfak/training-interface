@@ -221,10 +221,15 @@ def create_roc_curve_figure(y_true, y_proba):
     ax = fig.add_subplot(111)
 
     try:
+        y_true_arr = np.asarray(y_true)
+        if y_true_arr.ndim > 1:
+            # Convert one-hot or multi-column labels to class indices
+            y_true_arr = np.argmax(y_true_arr, axis=1)
+
         scores = np.asarray(y_proba)
         if scores.ndim == 2 and scores.shape[1] == 2:
             scores = scores[:, 1]
-        fpr, tpr, _ = roc_curve(y_true, scores)
+        fpr, tpr, _ = roc_curve(y_true_arr, scores)
         roc_auc = auc(fpr, tpr)
         ax.plot(fpr, tpr, color='darkorange', lw=2, label=f'AUC = {roc_auc:.3f}')
         ax.plot([0, 1], [0, 1], color='navy', lw=1, linestyle='--')

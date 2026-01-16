@@ -83,9 +83,12 @@ class ResultsManager:
 
             if res.get("y_proba") is not None:
                 try:
-                    unique_classes = set(list(y_test))
+                    y_true_arr = np.asarray(y_test)
+                    if y_true_arr.ndim > 1:
+                        y_true_arr = np.argmax(y_true_arr, axis=1)
+                    unique_classes = set(list(y_true_arr))
                     if len(unique_classes) == 2:
-                        fig_roc = create_roc_curve_figure(y_test, res["y_proba"])
+                        fig_roc = create_roc_curve_figure(y_true_arr, res["y_proba"])
                         canvas_roc = FigureCanvas(fig_roc)
                         canvas_roc.setFixedSize(320, 320)
                         tiles.addWidget(canvas_roc)
