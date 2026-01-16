@@ -44,12 +44,21 @@ Bu proje, farklı veri tipleri için özelleştirilmiş eğitim ve çıkarım (i
 - Tekil metin, görüntü veya ses dosyası yükleyerek anlık sonuç alabilirsiniz.
 - Tablosal veriler için CSV ile toplu tahmin ve dışa aktarım.
 
-### 6. 🌐 Çoklu Dil Desteği (TR/EN)
+### 6. 🧹 Veri Düzenleme (Dataset Editor)
+- CSV önizleme, satır/sütun silme, dedup, eksik doldurma ve metin temizleme.
+- Etiketleme için dışa aktarım ve geri içe alma.
+
+### 7. 🌐 Çoklu Dil Desteği (TR/EN)
 - Arayüz **Türkçe (TR)** ve **İngilizce (EN)** dillerini destekler.
 
-### 7. 📦 Çıktı Seçenekleri (Outputs)
+### 8. 📦 Çıktı Seçenekleri (Outputs)
 - Eğitim çıktıları artık `results/` altında tarih damgalı klasörlerde saklanır.
 - Model, veri setleri, vectorizer/scaler, grafikler, özet raporlar ve model kartları isteğe bağlı kaydedilir.
+
+### 9. 🧩 Gelişmiş Öğrenme
+- **Ensemble (Voting)** ve **ROC eğrisi** desteği.
+- **Transfer Learning** (ResNet18 / MobileNetV2 / EfficientNet-B0).
+- **Federated (deneysel)** simülasyonu (sınıflandırma).
 
 ## 🤖 Desteklenen Modeller (Supported Models)
 
@@ -87,8 +96,11 @@ training-interface/
 ├── requirements.txt        # Bağımlılıklar
 ├── modules/                # Arka plan işlemleri
 │   ├── data_loader.py      # Veri yükleme ve işleme (Görüntü, Ses, Metin)
+│   ├── data_prep.py        # Veri temizleme / düzenleme
 │   ├── model_trainer.py    # Model tanımları ve eğitim fonksiyonları
 │   ├── training_manager.py # Eğitim döngüsü yönetimi
+│   ├── transfer_learning.py# Transfer learning yardımcıları
+│   ├── federated.py        # Federated (simülasyon)
 │   ├── visualization.py    # Grafik çizdirme araçları
 │   └── languages.py        # Dil dosyası
 ├── ui_qt/                  # Kullanıcı Arayüzü (PyQt6)
@@ -98,7 +110,8 @@ training-interface/
 │   ├── image_tab.py        # Görüntü eğitimi arayüzü
 │   ├── audio_tab.py        # Ses eğitimi arayüzü
 │   ├── tabular_tab.py      # Tablosal veri eğitimi arayüzü
-│   └── inference_tab.py    # Tahminleme arayüzü
+│   ├── inference_tab.py    # Tahminleme arayüzü
+│   └── dataset_editor_tab.py # Veri düzenleme arayüzü
 └── results/                # Eğitim çıktıları (tarih damgalı klasörler)
 ```
 

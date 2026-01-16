@@ -3,10 +3,9 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLab
 from PyQt6.QtCore import Qt
 
 from ui_qt.base_tab import BaseTrainingTab
-from modules.model_trainer import get_model, get_incremental_model
+from modules.model_trainer import get_model, get_incremental_model, build_voting_classifier
 from modules.data_loader import load_images_from_folder, LazyImageLoader
 from modules.augmentation import get_augmentor
-from modules.deep_learning import get_cnn_model, CNNTrainer, prepare_cnn_data, save_cnn_model
 from modules.config import DEFAULT_TEST_SIZE, DEFAULT_EPOCHS, DEFAULT_CV_FOLDS
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
@@ -34,6 +33,7 @@ class ImageTrainingTab(BaseTrainingTab):
             "Gradient Boosting": "model_info_gradient_boosting",
             "Simple CNN 🧠": "model_info_simple_cnn",
             "Deep CNN 🧠": "model_info_deep_cnn",
+            "Ensemble (Voting)": "model_info_ensemble",
         }
         super().__init__(lang)
 
@@ -61,6 +61,7 @@ class ImageTrainingTab(BaseTrainingTab):
             "SVM", "Random Forest", "KNN", "Logistic Regression", "Decision Tree",
             "Naive Bayes (Gaussian)", "Gradient Boosting", "Simple CNN 🧠", "Deep CNN 🧠"
         ]
+        models.append("Ensemble (Voting)")
         models_grid = QGridLayout()
         models_grid.setSizeConstraint(QGridLayout.SizeConstraint.SetFixedSize)
         models_grid.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -114,10 +115,15 @@ class ImageTrainingTab(BaseTrainingTab):
         layout.addLayout(test_row)
 
         # Output options
-        self.create_output_options(layout)
+        out_info_row = QHBoxLayout()
         btn_out_info = QPushButton("ℹ️")
+        btn_out_info.setFixedSize(28, 28)
+        btn_out_info.setStyleSheet("padding: 4px;")
         btn_out_info.clicked.connect(lambda: self.open_info_window(self.tr("lbl_output_options"), self.tr("help_output_options")))
-        layout.addWidget(btn_out_info)
+        out_info_row.addWidget(btn_out_info)
+        out_info_row.addStretch(1)
+        layout.addLayout(out_info_row)
+        self.create_output_options(layout)
 
         self.chk_opt = QCheckBox(self.tr("chk_optimize"))
         layout.addWidget(self.chk_opt)
@@ -188,6 +194,20 @@ class ImageTrainingTab(BaseTrainingTab):
         cv_row.addStretch(1)
         layout.addLayout(cv_row)
 
+        tl_row = QHBoxLayout()
+        self.chk_tl = QCheckBox(self.tr("lbl_transfer_learning"))
+        tl_row.addWidget(self.chk_tl)
+        tl_row.addWidget(QLabel(self.tr("lbl_transfer_model")))
+        self.combo_tl = QComboBox()
+        self.combo_tl.addItems(["ResNet18", "MobileNetV2", "EfficientNet-B0"])
+        self.combo_tl.setMaximumWidth(180)
+        tl_row.addWidget(self.combo_tl)
+        self.chk_freeze = QCheckBox(self.tr("lbl_freeze_base"))
+        self.chk_freeze.setChecked(True)
+        tl_row.addWidget(self.chk_freeze)
+        tl_row.addStretch(1)
+        layout.addLayout(tl_row)
+
         self.btn_train = QPushButton(self.tr("btn_start_training"))
         self.btn_train.clicked.connect(self.start_training)
         layout.addWidget(self.btn_train)
@@ -255,8 +275,26 @@ class ImageTrainingTab(BaseTrainingTab):
             if cnn_models and not batch_mode:
                 self._train_cnn_models(cnn_models, test_size, epochs, le)
 
+            if self.chk_tl.isChecked() and not batch_mode:
+                model_name = self.combo_tl_model.currentText()
+                freeze_base = self.chk_freeze.isChecked()
+                def log_fn(msg, color):
+                    self.results_manager.log_message(msg, color)
+                tl_model, tl_acc = train_transfer_learning(
+                    self.folder_path,
+                    model_name=model_name,
+                    epochs=max(epochs, 3),
+                    batch_size=16,
+                    freeze_base=freeze_base,
+                    log_callback=log_fn,
+                )
+                self.results_manager.add_result(f"TL {model_name}", {"Accuracy": tl_acc, "F1-Score": tl_acc}, is_classification=True)
+
             models_to_train = {}
+            base_models = {}
             for name in sklearn_models:
+                if name == "Ensemble (Voting)":
+                    continue
                 params = self.user_model_params.get(name, {})
                 if batch_mode:
                     model = get_incremental_model(name, **params)
@@ -264,6 +302,14 @@ class ImageTrainingTab(BaseTrainingTab):
                     model = get_model(name, **params)
                 if model is not None:
                     models_to_train[name] = model
+                    base_models[name] = model
+
+            if "Ensemble (Voting)" in sklearn_models:
+                ensemble = build_voting_classifier(base_models)
+                if ensemble is None:
+                    QMessageBox.warning(self, self.tr("msg_warning"), self.tr("msg_ensemble_need_models"))
+                else:
+                    models_to_train["Ensemble (Voting)"] = ensemble
 
             if models_to_train:
                 self.run_training_loop(
@@ -282,10 +328,31 @@ class ImageTrainingTab(BaseTrainingTab):
                     cv_folds=cv_folds,
                     save_options=save_options,
                 )
+
+            if self.chk_tl.isChecked():
+                from modules.transfer_learning import train_transfer_learning, save_transfer_model
+                model_name = self.combo_tl.currentText()
+                freeze = self.chk_freeze.isChecked()
+                model, acc, classes = train_transfer_learning(
+                    self.folder_path,
+                    model_name=model_name,
+                    epochs=max(epochs, 3),
+                    batch_size=16,
+                    freeze_base=freeze,
+                    log_callback=lambda msg, color: self.results_manager.log_message(msg, color),
+                )
+                self.results_manager.add_result(f"Transfer {model_name}", {"Accuracy": acc, "F1-Score": acc}, is_classification=True)
+
+                import os, datetime
+                save_dir = os.path.join("results", f"transfer_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}")
+                os.makedirs(save_dir, exist_ok=True)
+                save_path = os.path.join(save_dir, f"{model_name.replace(' ', '_')}.pt")
+                save_transfer_model(model, save_path, classes, model_name=model_name)
         except Exception as e:
             QMessageBox.critical(self, self.tr("msg_error"), self.tr("msg_image_load_error").format(error=e))
 
     def _train_cnn_models(self, cnn_models, test_size, epochs, label_encoder):
+        from modules.deep_learning import get_cnn_model, CNNTrainer, prepare_cnn_data, save_cnn_model
         for model_name in cnn_models:
             clean_name = model_name.replace(" 🧠", "")
             train_loader, val_loader, le, num_classes = prepare_cnn_data(self.folder_path, img_size=64, test_size=test_size, batch_size=32)
@@ -300,7 +367,7 @@ class ImageTrainingTab(BaseTrainingTab):
             self.results_manager.add_result(clean_name, {"Accuracy": final_acc/100, "F1-Score": final_acc/100}, is_classification=True)
 
             import os, datetime
-            save_dir = os.path.join("training_results", f"image_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}")
+            save_dir = os.path.join("results", f"image_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}")
             os.makedirs(save_dir, exist_ok=True)
             model_path = os.path.join(save_dir, f"{clean_name.replace(' ', '_')}.pt")
             save_cnn_model(model, model_path, label_encoder=le)

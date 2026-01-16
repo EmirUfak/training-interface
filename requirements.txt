@@ -8,6 +8,7 @@ joblib
 PyQt6
 Pillow
 torch
+torchvision
 torchaudio
 skl2onnx
 onnx

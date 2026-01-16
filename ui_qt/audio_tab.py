@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLab
 from PyQt6.QtCore import Qt
 
 from ui_qt.base_tab import BaseTrainingTab
-from modules.model_trainer import get_model
+from modules.model_trainer import get_model, build_voting_classifier
 from modules.data_loader import load_audio_from_folder
 from modules.config import DEFAULT_TEST_SIZE, DEFAULT_CV_FOLDS
 from sklearn.preprocessing import LabelEncoder
@@ -30,6 +30,7 @@ class AudioTrainingTab(BaseTrainingTab):
             "Decision Tree": "model_info_decision_tree",
             "Naive Bayes (Gaussian)": "model_info_nb_gaussian",
             "Gradient Boosting": "model_info_gradient_boosting",
+            "Ensemble (Voting)": "model_info_ensemble",
         }
         super().__init__(lang)
 
@@ -51,7 +52,7 @@ class AudioTrainingTab(BaseTrainingTab):
 
         layout.addWidget(QLabel(self.tr("header_models")))
         self.models_vars = {}
-        models = ["SVM", "Random Forest", "KNN", "Logistic Regression", "Decision Tree", "Naive Bayes (Gaussian)", "Gradient Boosting"]
+        models = ["SVM", "Random Forest", "KNN", "Logistic Regression", "Decision Tree", "Naive Bayes (Gaussian)", "Gradient Boosting", "Ensemble (Voting)"]
         models_grid = QGridLayout()
         models_grid.setSizeConstraint(QGridLayout.SizeConstraint.SetFixedSize)
         models_grid.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -103,10 +104,15 @@ class AudioTrainingTab(BaseTrainingTab):
         test_row.addStretch(1)
         layout.addLayout(test_row)
 
-        self.create_output_options(layout)
+        out_info_row = QHBoxLayout()
         btn_out_info = QPushButton("ℹ️")
+        btn_out_info.setFixedSize(28, 28)
+        btn_out_info.setStyleSheet("padding: 4px;")
         btn_out_info.clicked.connect(lambda: self.open_info_window(self.tr("lbl_output_options"), self.tr("help_output_options")))
-        layout.addWidget(btn_out_info)
+        out_info_row.addWidget(btn_out_info)
+        out_info_row.addStretch(1)
+        layout.addLayout(out_info_row)
+        self.create_output_options(layout)
 
         self.chk_opt = QCheckBox(self.tr("chk_optimize"))
         layout.addWidget(self.chk_opt)
@@ -178,11 +184,22 @@ class AudioTrainingTab(BaseTrainingTab):
 
             selected_models = [n for n, cb in self.models_vars.items() if cb.isChecked()]
             models_to_train = {}
+            base_models = {}
             for name in selected_models:
+                if name == "Ensemble (Voting)":
+                    continue
                 params = self.user_model_params.get(name, {})
                 model = get_model(name, **params)
                 if model is not None:
                     models_to_train[name] = model
+                    base_models[name] = model
+
+            if "Ensemble (Voting)" in selected_models:
+                ensemble = build_voting_classifier(base_models)
+                if ensemble is None:
+                    QMessageBox.warning(self, self.tr("msg_warning"), self.tr("msg_ensemble_need_models"))
+                else:
+                    models_to_train["Ensemble (Voting)"] = ensemble
 
             self.run_training_loop(
                 models_to_train,

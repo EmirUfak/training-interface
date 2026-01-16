@@ -29,7 +29,8 @@ def test_training_manager_outputs(tmp_path: Path, monkeypatch):
     )
 
     # Locate output dir
-    result_dirs = [p for p in tmp_path.iterdir() if p.is_dir() and p.name.startswith("training_results_")]
+    results_root = tmp_path / "results"
+    result_dirs = [p for p in results_root.iterdir() if p.is_dir() and p.name.startswith("training_results_")]
     assert len(result_dirs) == 1
     save_dir = result_dirs[0]
 

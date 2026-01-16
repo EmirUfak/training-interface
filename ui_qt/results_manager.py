@@ -5,7 +5,7 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 import pandas as pd
 
 from modules.languages import get_text
-from modules.visualization import create_confusion_matrix_figure, create_feature_importance_figure, create_comparison_figure, create_regression_report
+from modules.visualization import create_confusion_matrix_figure, create_feature_importance_figure, create_comparison_figure, create_regression_report, create_roc_curve_figure
 
 
 class ResultsManager:
@@ -80,6 +80,19 @@ class ResultsManager:
                 tiles.addWidget(canvas_imp)
                 if _opt("save_plots"):
                     fig_imp.savefig(f"{save_dir}/{name}_feature_importance.png")
+
+            if res.get("y_proba") is not None:
+                try:
+                    unique_classes = set(list(y_test))
+                    if len(unique_classes) == 2:
+                        fig_roc = create_roc_curve_figure(y_test, res["y_proba"])
+                        canvas_roc = FigureCanvas(fig_roc)
+                        canvas_roc.setFixedSize(320, 320)
+                        tiles.addWidget(canvas_roc)
+                        if _opt("save_plots"):
+                            fig_roc.savefig(f"{save_dir}/{name}_roc_curve.png")
+                except Exception:
+                    pass
             tiles.addStretch(1)
             vbox.addLayout(tiles)
 
@@ -120,5 +133,19 @@ class ResultsManager:
             details = f"{self.tr('lbl_model')}: {data['name']}\n{self.tr('lbl_f1')}: {data['f1']:.4f}\n{self.tr('lbl_accuracy')}: {data['acc']:.4f}"
         vbox.addWidget(QLabel(details))
         vbox.addWidget(QLabel(f"{self.tr('lbl_file')}: {filename}"))
+        self.results_layout.addWidget(box)
+        self._scroll_to_bottom(self.results_scroll)
+
+    def add_result(self, name: str, metrics: dict, is_classification: bool = True):
+        box = QGroupBox(f"✅ {name}")
+        vbox = QVBoxLayout(box)
+        if is_classification:
+            acc = metrics.get("Accuracy", 0)
+            f1 = metrics.get("F1-Score", 0)
+            vbox.addWidget(QLabel(f"{self.tr('lbl_accuracy')}: {acc:.4f} | {self.tr('lbl_f1')}: {f1:.4f}"))
+        else:
+            r2 = metrics.get("R2", 0)
+            mse = metrics.get("MSE", 0)
+            vbox.addWidget(QLabel(f"{self.tr('lbl_r2')}: {r2:.4f} | {self.tr('lbl_mse')}: {mse:.4f}"))
         self.results_layout.addWidget(box)
         self._scroll_to_bottom(self.results_scroll)

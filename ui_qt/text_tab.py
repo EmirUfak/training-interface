@@ -4,9 +4,10 @@ from PyQt6.QtCore import Qt
 import pandas as pd
 
 from ui_qt.base_tab import BaseTrainingTab
-from modules.model_trainer import get_model
+from modules.model_trainer import get_model, build_voting_classifier
 from modules.data_loader import load_and_vectorize_text, get_stop_words
 from modules.config import DEFAULT_MAX_FEATURES, DEFAULT_NGRAM, DEFAULT_TEST_SIZE, DEFAULT_CV_FOLDS
+from modules.federated import federated_train_classifier
 
 
 class TextTrainingTab(BaseTrainingTab):
@@ -49,6 +50,7 @@ class TextTrainingTab(BaseTrainingTab):
             "Decision Tree": "model_info_decision_tree",
             "Gradient Boosting": "model_info_gradient_boosting",
             "KNN": "model_info_knn",
+            "Ensemble (Voting)": "model_info_ensemble",
         }
         super().__init__(lang)
 
@@ -90,17 +92,19 @@ class TextTrainingTab(BaseTrainingTab):
         models_grid = QGridLayout()
         models_grid.setSizeConstraint(QGridLayout.SizeConstraint.SetFixedSize)
         models_grid.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        models = ["Naive Bayes", "SVM", "Random Forest", "Logistic Regression", "Decision Tree", "Gradient Boosting", "KNN"]
+        models = ["Naive Bayes", "SVM", "Random Forest", "Logistic Regression", "Decision Tree", "Gradient Boosting", "KNN", "Ensemble (Voting)"]
         for idx, name in enumerate(models):
             cb = QCheckBox(name)
             if name in ["Naive Bayes", "SVM"]:
                 cb.setChecked(True)
             self.models_vars[name] = cb
 
-            btn_set = QPushButton("⚙️")
-            btn_set.clicked.connect(lambda _, n=name: self.open_settings_window(n))
-            btn_set.setFixedSize(28, 28)
-            btn_set.setStyleSheet("padding: 4px;")
+            btn_set = None
+            if name in self.param_config:
+                btn_set = QPushButton("⚙️")
+                btn_set.clicked.connect(lambda _, n=name: self.open_settings_window(n))
+                btn_set.setFixedSize(28, 28)
+                btn_set.setStyleSheet("padding: 4px;")
             btn_info = QPushButton("ℹ️")
             btn_info.clicked.connect(lambda _, n=name: self.open_info_window(n, self.tr(self.model_info_keys[n])))
             btn_info.setFixedSize(28, 28)
@@ -111,7 +115,8 @@ class TextTrainingTab(BaseTrainingTab):
             cell_layout.setContentsMargins(0, 0, 0, 0)
             cell_layout.setSpacing(4)
             cell_layout.addWidget(cb)
-            cell_layout.addWidget(btn_set)
+            if btn_set:
+                cell_layout.addWidget(btn_set)
             cell_layout.addWidget(btn_info)
 
             row = idx // 2
@@ -171,10 +176,15 @@ class TextTrainingTab(BaseTrainingTab):
         layout.addLayout(params3)
 
         # Output options
-        self.create_output_options(layout)
+        out_info_row = QHBoxLayout()
         btn_out_info = QPushButton("ℹ️")
+        btn_out_info.setFixedSize(28, 28)
+        btn_out_info.setStyleSheet("padding: 4px;")
         btn_out_info.clicked.connect(lambda: self.open_info_window(self.tr("lbl_output_options"), self.tr("help_output_options")))
-        layout.addWidget(btn_out_info)
+        out_info_row.addWidget(btn_out_info)
+        out_info_row.addStretch(1)
+        layout.addLayout(out_info_row)
+        self.create_output_options(layout)
 
         # Optimize / CV
         self.chk_opt = QCheckBox(self.tr("chk_optimize"))
@@ -203,6 +213,9 @@ class TextTrainingTab(BaseTrainingTab):
         cv_row.addWidget(self.entry_cv)
         cv_row.addStretch(1)
         layout.addLayout(cv_row)
+
+        self.chk_federated = QCheckBox(self.tr("lbl_federated"))
+        layout.addWidget(self.chk_federated)
 
         # Train
         self.btn_train = QPushButton(self.tr("btn_start_training"))
@@ -294,11 +307,29 @@ class TextTrainingTab(BaseTrainingTab):
 
             selected_models = [name for name, cb in self.models_vars.items() if cb.isChecked()]
             models_to_train = {}
+            base_models = {}
             for name in selected_models:
+                if name == "Ensemble (Voting)":
+                    continue
                 params = self.user_model_params.get(name, {})
                 model = get_model(name, **params)
                 if model is not None:
                     models_to_train[name] = model
+                    base_models[name] = model
+
+            if "Ensemble (Voting)" in selected_models:
+                ensemble = build_voting_classifier(base_models)
+                if ensemble is None:
+                    QMessageBox.warning(self, self.tr("msg_warning"), self.tr("msg_ensemble_need_models"))
+                else:
+                    models_to_train["Ensemble (Voting)"] = ensemble
+
+            if self.chk_federated.isChecked():
+                import os, time
+                result = federated_train_classifier(X_train, y_train, X_test, y_test, n_clients=3, epochs=3)
+                save_dir = os.path.join("results", f"federated_{time.strftime('%Y%m%d-%H%M%S')}")
+                os.makedirs(save_dir, exist_ok=True)
+                self.results_manager.show_model_result("Federated SGD", result, None, y_test, save_dir)
 
             self.run_training_loop(
                 models_to_train,

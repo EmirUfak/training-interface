@@ -7,6 +7,8 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog,
     QMessageBox, QComboBox, QTextEdit, QScrollArea, QFormLayout, QLineEdit
 )
+from PyQt6.QtWidgets import QToolTip
+from PyQt6.QtGui import QCursor
 from PyQt6.QtCore import Qt
 
 from modules.data_loader import load_single_image, load_single_audio
@@ -54,9 +56,11 @@ class InferenceTab(QWidget):
             self.tr("type_tabular"): "tabular",
         }
         self.combo_type = QComboBox()
+        self.combo_type.setMaximumWidth(240)
         self.combo_type.addItems(list(self.type_map.keys()))
         self.combo_type.currentTextChanged.connect(self.on_type_change)
         type_row.addWidget(self.combo_type)
+        type_row.addStretch(1)
         load_layout.addLayout(type_row)
 
         model_row = QHBoxLayout()
@@ -65,6 +69,7 @@ class InferenceTab(QWidget):
         self.lbl_model_path = QLabel(self.tr("lbl_no_file"))
         model_row.addWidget(self.btn_load_model)
         model_row.addWidget(self.lbl_model_path)
+        model_row.addStretch(1)
         load_layout.addLayout(model_row)
 
         extra_row = QHBoxLayout()
@@ -73,6 +78,7 @@ class InferenceTab(QWidget):
         self.lbl_extra_path = QLabel(self.tr("lbl_not_needed"))
         extra_row.addWidget(self.btn_load_extra)
         extra_row.addWidget(self.lbl_extra_path)
+        extra_row.addStretch(1)
         load_layout.addLayout(extra_row)
 
         self.tabular_files_frame = QWidget()
@@ -81,24 +87,36 @@ class InferenceTab(QWidget):
         f1 = QHBoxLayout()
         self.btn_load_features = QPushButton(self.tr("btn_load_features"))
         self.btn_load_features.clicked.connect(self.load_feature_cols)
+        btn_feat_info = QPushButton("ℹ️")
+        btn_feat_info.setFixedSize(24, 24)
+        btn_feat_info.clicked.connect(lambda: self._show_info(self.tr("btn_load_features"), self.tr("help_feature_cols")))
         self.lbl_features = QLabel(self.tr("lbl_not_loaded"))
         f1.addWidget(self.btn_load_features)
+        f1.addWidget(btn_feat_info)
         f1.addWidget(self.lbl_features)
         tabular_files_layout.addLayout(f1)
 
         f2 = QHBoxLayout()
         self.btn_load_label_enc = QPushButton(self.tr("btn_load_label_enc"))
         self.btn_load_label_enc.clicked.connect(self.load_label_encoder)
+        btn_label_info = QPushButton("ℹ️")
+        btn_label_info.setFixedSize(24, 24)
+        btn_label_info.clicked.connect(lambda: self._show_info(self.tr("btn_load_label_enc"), self.tr("help_label_encoder")))
         self.lbl_label_enc = QLabel(self.tr("lbl_not_loaded"))
         f2.addWidget(self.btn_load_label_enc)
+        f2.addWidget(btn_label_info)
         f2.addWidget(self.lbl_label_enc)
         tabular_files_layout.addLayout(f2)
 
         f3 = QHBoxLayout()
         self.btn_load_encoder = QPushButton(self.tr("btn_load_encoder"))
         self.btn_load_encoder.clicked.connect(self.load_onehot_encoder)
+        btn_enc_info = QPushButton("ℹ️")
+        btn_enc_info.setFixedSize(24, 24)
+        btn_enc_info.clicked.connect(lambda: self._show_info(self.tr("btn_load_encoder"), self.tr("help_onehot_encoder")))
         self.lbl_encoder = QLabel(self.tr("lbl_not_loaded"))
         f3.addWidget(self.btn_load_encoder)
+        f3.addWidget(btn_enc_info)
         f3.addWidget(self.lbl_encoder)
         tabular_files_layout.addLayout(f3)
 
@@ -112,6 +130,7 @@ class InferenceTab(QWidget):
         pred_layout.addWidget(QLabel(self.tr("header_predict")))
 
         self.text_input = QTextEdit()
+        self.text_input.setFixedHeight(120)
         self.file_input_frame = QWidget()
         file_layout = QHBoxLayout(self.file_input_frame)
         self.btn_select_file = QPushButton(self.tr("btn_file_select"))
@@ -119,6 +138,7 @@ class InferenceTab(QWidget):
         self.lbl_input_file = QLabel(self.tr("lbl_input_file"))
         file_layout.addWidget(self.btn_select_file)
         file_layout.addWidget(self.lbl_input_file)
+        file_layout.addStretch(1)
 
         self.tabular_input_scroll = QScrollArea()
         self.tabular_input_scroll.setWidgetResizable(True)
@@ -130,12 +150,17 @@ class InferenceTab(QWidget):
         batch_layout = QHBoxLayout(self.batch_frame)
         self.btn_select_csv = QPushButton(self.tr("btn_select_csv_batch"))
         self.btn_select_csv.clicked.connect(self.select_batch_csv)
+        btn_batch_info = QPushButton("ℹ️")
+        btn_batch_info.setFixedSize(24, 24)
+        btn_batch_info.clicked.connect(lambda: self._show_info(self.tr("btn_select_csv_batch"), self.tr("help_batch_csv")))
         self.lbl_batch_csv = QLabel(self.tr("lbl_no_file"))
         self.btn_run_batch = QPushButton(self.tr("btn_run_batch"))
         self.btn_run_batch.clicked.connect(self.run_batch_prediction)
         batch_layout.addWidget(self.btn_select_csv)
+        batch_layout.addWidget(btn_batch_info)
         batch_layout.addWidget(self.lbl_batch_csv)
         batch_layout.addWidget(self.btn_run_batch)
+        batch_layout.addStretch(1)
 
         pred_layout.addWidget(self.text_input)
         pred_layout.addWidget(self.file_input_frame)
@@ -153,6 +178,10 @@ class InferenceTab(QWidget):
         layout.addWidget(pred_frame)
 
         self.on_type_change(self.tr("type_text"))
+
+    def _show_info(self, title: str, text: str):
+        content = f"<b>{title}</b><br/>{text}"
+        QToolTip.showText(QCursor.pos(), content, self)
 
     def on_type_change(self, choice):
         self.model_type = self.type_map.get(choice, "text")

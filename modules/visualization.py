@@ -215,3 +215,30 @@ def create_regression_report(y_true, y_pred, model_name="Model"):
     fig.tight_layout()
     return fig
 
+
+def create_roc_curve_figure(y_true, y_proba):
+    fig = Figure(figsize=(5, 4))
+    ax = fig.add_subplot(111)
+
+    try:
+        scores = np.asarray(y_proba)
+        if scores.ndim == 2 and scores.shape[1] == 2:
+            scores = scores[:, 1]
+        fpr, tpr, _ = roc_curve(y_true, scores)
+        roc_auc = auc(fpr, tpr)
+        ax.plot(fpr, tpr, color='darkorange', lw=2, label=f'AUC = {roc_auc:.3f}')
+        ax.plot([0, 1], [0, 1], color='navy', lw=1, linestyle='--')
+        ax.set_xlim([0.0, 1.0])
+        ax.set_ylim([0.0, 1.05])
+        ax.set_xlabel('False Positive Rate', fontsize=9)
+        ax.set_ylabel('True Positive Rate', fontsize=9)
+        ax.set_title('ROC Curve', fontsize=11)
+        ax.legend(loc="lower right", fontsize=9)
+        ax.tick_params(labelsize=8)
+    except Exception as e:
+        logger.warning(f"ROC curve oluşturulamadı: {e}")
+        ax.text(0.5, 0.5, "ROC Curve\nkullanılamıyor", ha='center', va='center')
+
+    fig.tight_layout()
+    return fig
+

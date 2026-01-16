@@ -4,11 +4,6 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QToolTip
 
 from modules.languages import get_text
-from ui_qt.text_tab import TextTrainingTab
-from ui_qt.image_tab import ImageTrainingTab
-from ui_qt.audio_tab import AudioTrainingTab
-from ui_qt.tabular_tab import TabularTrainingTab
-from ui_qt.inference_tab import InferenceTab
 
 
 class TrainingInterface(QMainWindow):
@@ -83,14 +78,18 @@ class TrainingInterface(QMainWindow):
         self.title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
         sidebar_layout.addWidget(self.title_label)
 
+        self.btn_dataset = QPushButton(get_text("sidebar_dataset", self.current_lang))
+        self.btn_lang = QPushButton(get_text("lang_toggle", self.current_lang))
         self.btn_text = QPushButton(get_text("sidebar_text", self.current_lang))
         self.btn_image = QPushButton(get_text("sidebar_image", self.current_lang))
         self.btn_audio = QPushButton(get_text("sidebar_audio", self.current_lang))
         self.btn_tabular = QPushButton(get_text("sidebar_tabular", self.current_lang))
         self.btn_infer = QPushButton(get_text("sidebar_inference", self.current_lang))
-        self.btn_lang = QPushButton(get_text("lang_toggle", self.current_lang))
 
-        for b in [self.btn_text, self.btn_image, self.btn_audio, self.btn_tabular, self.btn_infer, self.btn_lang]:
+        sidebar_layout.addWidget(self.btn_lang)
+        sidebar_layout.addSpacing(10)
+
+        for b in [self.btn_dataset, self.btn_text, self.btn_image, self.btn_audio, self.btn_tabular, self.btn_infer]:
             sidebar_layout.addWidget(b)
 
         self.main_layout.addWidget(self.sidebar, 0)
@@ -101,23 +100,76 @@ class TrainingInterface(QMainWindow):
             self.stack.deleteLater()
 
         self.stack = QStackedWidget()
-        self.text_tab = TextTrainingTab(lang=self.current_lang)
-        self.image_tab = ImageTrainingTab(lang=self.current_lang)
-        self.audio_tab = AudioTrainingTab(lang=self.current_lang)
-        self.tabular_tab = TabularTrainingTab(lang=self.current_lang)
-        self.inference_tab = InferenceTab(lang=self.current_lang)
+        self._tab_placeholders = {}
+        self._tab_instances = {
+            "text": None,
+            "image": None,
+            "audio": None,
+            "tabular": None,
+            "inference": None,
+            "dataset": None,
+        }
 
-        self.stack.addWidget(self.text_tab)
-        self.stack.addWidget(self.image_tab)
-        self.stack.addWidget(self.audio_tab)
-        self.stack.addWidget(self.tabular_tab)
-        self.stack.addWidget(self.inference_tab)
+        for key in self._tab_instances.keys():
+            placeholder = QWidget()
+            self._tab_placeholders[key] = placeholder
+            self.stack.addWidget(placeholder)
 
         self.main_layout.addWidget(self.stack, 1)
 
-        self.btn_text.clicked.connect(lambda: self.stack.setCurrentWidget(self.text_tab))
-        self.btn_image.clicked.connect(lambda: self.stack.setCurrentWidget(self.image_tab))
-        self.btn_audio.clicked.connect(lambda: self.stack.setCurrentWidget(self.audio_tab))
-        self.btn_tabular.clicked.connect(lambda: self.stack.setCurrentWidget(self.tabular_tab))
-        self.btn_infer.clicked.connect(lambda: self.stack.setCurrentWidget(self.inference_tab))
+        self.btn_text.clicked.connect(lambda: self._show_tab("text"))
+        self.btn_image.clicked.connect(lambda: self._show_tab("image"))
+        self.btn_audio.clicked.connect(lambda: self._show_tab("audio"))
+        self.btn_tabular.clicked.connect(lambda: self._show_tab("tabular"))
+        self.btn_infer.clicked.connect(lambda: self._show_tab("inference"))
+        self.btn_dataset.clicked.connect(lambda: self._show_tab("dataset"))
         self.btn_lang.clicked.connect(self.toggle_language)
+
+        self._show_tab("text")
+
+    def _create_tab(self, key: str) -> QWidget:
+        if key == "text":
+            from ui_qt.text_tab import TextTrainingTab
+            return TextTrainingTab(lang=self.current_lang)
+        if key == "image":
+            from ui_qt.image_tab import ImageTrainingTab
+            return ImageTrainingTab(lang=self.current_lang)
+        if key == "audio":
+            from ui_qt.audio_tab import AudioTrainingTab
+            return AudioTrainingTab(lang=self.current_lang)
+        if key == "tabular":
+            from ui_qt.tabular_tab import TabularTrainingTab
+            return TabularTrainingTab(lang=self.current_lang)
+        if key == "inference":
+            from ui_qt.inference_tab import InferenceTab
+            return InferenceTab(lang=self.current_lang)
+        if key == "dataset":
+            from ui_qt.dataset_editor_tab import DatasetEditorTab
+            return DatasetEditorTab(lang=self.current_lang)
+        return QWidget()
+
+    def _show_tab(self, key: str):
+        if self._tab_instances.get(key) is None:
+            widget = self._create_tab(key)
+            placeholder = self._tab_placeholders[key]
+            index = self.stack.indexOf(placeholder)
+            self.stack.insertWidget(index, widget)
+            self.stack.removeWidget(placeholder)
+            placeholder.deleteLater()
+            self._tab_instances[key] = widget
+        self.stack.setCurrentWidget(self._tab_instances[key])
+        self._set_active_sidebar(key)
+
+    def _set_active_sidebar(self, key: str):
+        active_style = "background-color: #3a3a3a; font-weight: bold;"
+        default_style = ""
+        mapping = {
+            "dataset": self.btn_dataset,
+            "text": self.btn_text,
+            "image": self.btn_image,
+            "audio": self.btn_audio,
+            "tabular": self.btn_tabular,
+            "inference": self.btn_infer,
+        }
+        for k, btn in mapping.items():
+            btn.setStyleSheet(active_style if k == key else default_style)

@@ -5,7 +5,7 @@ import numpy as np
 from typing import Any, Dict, Optional
 from sklearn.naive_bayes import MultinomialNB, GaussianNB
 from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier, VotingRegressor
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
@@ -149,6 +149,21 @@ def get_regressor(name: str, **kwargs):
         return DecisionTreeRegressor(**clean_kwargs)
     return None
 
+
+def build_voting_classifier(estimators: Dict[str, Any]) -> Optional[VotingClassifier]:
+    items = [(name, model) for name, model in estimators.items() if model is not None]
+    if len(items) < 2:
+        return None
+    # soft voting if possible
+    return VotingClassifier(estimators=items, voting="soft")
+
+
+def build_voting_regressor(estimators: Dict[str, Any]) -> Optional[VotingRegressor]:
+    items = [(name, model) for name, model in estimators.items() if model is not None]
+    if len(items) < 2:
+        return None
+    return VotingRegressor(estimators=items)
+
 def train_model(
     model,
     X_train,
@@ -229,15 +244,40 @@ def train_model(
     except Exception as e:
         raise RuntimeError(f"Tahmin hatası (predict): {e}")
 
+    def _safe_proba(m, X):
+        if hasattr(m, "predict_proba"):
+            try:
+                return m.predict_proba(X)
+            except Exception:
+                return None
+        if hasattr(m, "decision_function"):
+            try:
+                scores = m.decision_function(X)
+                scores = np.asarray(scores)
+                if scores.ndim == 1:
+                    # scale to [0,1] for binary ROC
+                    min_s, max_s = scores.min(), scores.max()
+                    if max_s > min_s:
+                        probs = (scores - min_s) / (max_s - min_s)
+                    else:
+                        probs = scores
+                    return probs
+                return scores
+            except Exception:
+                return None
+        return None
+
     if task_type == "classification":
         acc = accuracy_score(y_test, y_pred)
         prec = precision_score(y_test, y_pred, average='weighted', zero_division=0)
         rec = recall_score(y_test, y_pred, average='weighted', zero_division=0)
         f1 = f1_score(y_test, y_pred, average='weighted', zero_division=0)
+        y_proba = _safe_proba(model, X_test_fit)
 
         return {
             "model": model,
             "y_pred": y_pred,
+            "y_proba": y_proba,
             "accuracy": acc,
             "precision": prec,
             "recall": rec,

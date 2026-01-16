@@ -5,8 +5,9 @@ import pandas as pd
 
 from ui_qt.base_tab import BaseTrainingTab
 from modules.data_loader import load_categorical_data
-from modules.model_trainer import get_model, get_regressor
+from modules.model_trainer import get_model, get_regressor, build_voting_classifier, build_voting_regressor
 from modules.config import DEFAULT_CV_FOLDS
+from modules.federated import federated_train_classifier
 from sklearn.model_selection import train_test_split
 
 
@@ -49,14 +50,15 @@ class TabularTrainingTab(BaseTrainingTab):
             "Gradient Boosting Regressor": "model_info_gb_regressor",
             "Decision Tree Regressor": "model_info_dt_regressor",
             "KNN Regressor": "model_info_knn_regressor",
+            "Ensemble (Voting)": "model_info_ensemble",
         }
         self.classification_models = [
             "Naive Bayes (Gaussian)", "SVM", "Random Forest", "Logistic Regression", "Decision Tree",
-            "Decision Tree (Entropy)", "Gradient Boosting", "KNN"
+            "Decision Tree (Entropy)", "Gradient Boosting", "KNN", "Ensemble (Voting)"
         ]
         self.regression_models = [
             "Linear Regression", "Ridge", "Lasso", "SVR", "Random Forest Regressor",
-            "Gradient Boosting Regressor", "Decision Tree Regressor", "KNN Regressor"
+            "Gradient Boosting Regressor", "Decision Tree Regressor", "KNN Regressor", "Ensemble (Voting)"
         ]
         super().__init__(lang)
 
@@ -102,10 +104,15 @@ class TabularTrainingTab(BaseTrainingTab):
         self.update_model_list(self.tr("task_classification"))
 
         # Output options
-        self.create_output_options(layout)
+        out_info_row = QHBoxLayout()
         btn_out_info = QPushButton("ℹ️")
+        btn_out_info.setFixedSize(28, 28)
+        btn_out_info.setStyleSheet("padding: 4px;")
         btn_out_info.clicked.connect(lambda: self.open_info_window(self.tr("lbl_output_options"), self.tr("help_output_options")))
-        layout.addWidget(btn_out_info)
+        out_info_row.addWidget(btn_out_info)
+        out_info_row.addStretch(1)
+        layout.addLayout(out_info_row)
+        self.create_output_options(layout)
 
         self.chk_opt = QCheckBox(self.tr("chk_optimize"))
         layout.addWidget(self.chk_opt)
@@ -133,6 +140,9 @@ class TabularTrainingTab(BaseTrainingTab):
         cv_row.addWidget(self.entry_cv)
         cv_row.addStretch(1)
         layout.addLayout(cv_row)
+
+        self.chk_federated = QCheckBox(self.tr("lbl_federated"))
+        layout.addWidget(self.chk_federated)
 
         self.btn_train = QPushButton(self.tr("btn_start_training"))
         self.btn_train.clicked.connect(self.start_training_thread)
@@ -266,11 +276,22 @@ class TabularTrainingTab(BaseTrainingTab):
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
             models_to_train = {}
+            base_models = {}
             for name in selected_models:
+                if name == "Ensemble (Voting)":
+                    continue
                 params = self.user_model_params.get(name, {})
                 model = get_regressor(name, **params) if is_regression else get_model(name, **params)
                 if model is not None:
                     models_to_train[name] = model
+                    base_models[name] = model
+
+            if "Ensemble (Voting)" in selected_models:
+                ensemble = build_voting_regressor(base_models) if is_regression else build_voting_classifier(base_models)
+                if ensemble is None:
+                    QMessageBox.warning(self, self.tr("msg_warning"), self.tr("msg_ensemble_need_models"))
+                else:
+                    models_to_train["Ensemble (Voting)"] = ensemble
 
             self.run_training_loop(
                 models_to_train,
@@ -291,5 +312,14 @@ class TabularTrainingTab(BaseTrainingTab):
                 cv_folds=cv_folds,
                 save_options=save_options,
             )
+
+            if self.chk_federated.isChecked() and not is_regression:
+                import os, time
+                fed_res = federated_train_classifier(X_train, y_train, X_test, y_test, n_clients=3, epochs=3)
+                save_dir = os.path.join("results", f"federated_{time.strftime('%Y%m%d-%H%M%S')}")
+                os.makedirs(save_dir, exist_ok=True)
+                self.results_manager.show_model_result("Federated SGD", fed_res, None, y_test, save_dir)
+            elif self.chk_federated.isChecked() and is_regression:
+                QMessageBox.warning(self, self.tr("msg_warning"), self.tr("msg_federated_classification_only"))
         except Exception as e:
             QMessageBox.critical(self, self.tr("msg_error"), self.tr("msg_training_error").format(error=e))
