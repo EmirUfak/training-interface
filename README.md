@@ -123,7 +123,7 @@ training-interface/
 
 ---
 
-# 🇬🇧 English Version
+# English Version
 
 **Screenshots are below → [Screenshots](#-screenshots)**
 
