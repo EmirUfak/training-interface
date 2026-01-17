@@ -16,3 +16,11 @@ def test_data_prep_operations():
 
     tokenized = data_prep.tokenize_text(df, "c")
     assert isinstance(tokenized.loc[0, "c"], str)
+
+
+def test_data_prep_drop_cols_rows():
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    df2 = data_prep.drop_cols(df, ["b"])
+    assert "b" not in df2.columns
+    df3 = data_prep.drop_rows(df, [0])
+    assert 0 not in df3.index

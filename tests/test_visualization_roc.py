@@ -7,3 +7,10 @@ def test_roc_curve_figure():
     y_proba = np.array([0.1, 0.9, 0.2, 0.8])
     fig = create_roc_curve_figure(y_true, y_proba)
     assert fig is not None
+
+
+def test_roc_curve_one_hot():
+    y_true = np.array([[1, 0], [0, 1], [1, 0], [0, 1]])
+    y_proba = np.array([[0.8, 0.2], [0.2, 0.8], [0.7, 0.3], [0.1, 0.9]])
+    fig = create_roc_curve_figure(y_true, y_proba)
+    assert fig is not None

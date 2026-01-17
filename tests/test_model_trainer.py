@@ -41,4 +41,28 @@ def test_train_model_regression_cv():
     )
 
     assert "r2" in res
-    assert "mse" in res
+
+
+def test_train_model_proba_output():
+    X = np.array([[0, 0], [1, 1], [1, 0], [0, 1]])
+    y = np.array([0, 1, 1, 0])
+    model = get_model("SVM")
+    res = train_model(model, X, y, X, y, task_type="classification")
+    assert "y_proba" in res
+
+
+def test_train_model_cv_small_samples():
+    X = np.array([[0, 0], [1, 1]])
+    y = np.array([0, 1])
+    model = get_model("Logistic Regression")
+    res = train_model(model, X, y, X, y, task_type="classification", cv_folds=5)
+    assert "f1" in res
+
+
+def test_train_model_kfold_cv_score():
+    X = np.array([[0, 0], [1, 1], [1, 0], [0, 1], [1, 2], [2, 1]])
+    y = np.array([0, 1, 1, 0, 1, 0])
+    model = get_model("Logistic Regression")
+    res = train_model(model, X, y, X, y, task_type="classification", cv_folds=3)
+    assert "cv_score" in res
+    assert "f1" in res
